@@ -282,8 +282,8 @@
         </div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.min.js"></script>
 
     <script>
         const SUPABASE_URL = 'https://repjgjjnqakjmwedogyc.supabase.co';
@@ -353,12 +353,6 @@
                 <div class="project-card" onclick="openProject('${p.id}')">
                     <div class="project-name">${p.name}</div>
                     <div class="project-date">${p.created_at}</div>
-                    <div class="stats">
-                        <div class="stat"><div class="stat-label">판매</div><div class="stat-value">0</div></div>
-                        <div class="stat"><div class="stat-label">판매액</div><div class="stat-value">0만</div></div>
-                        <div class="stat"><div class="stat-label">원가</div><div class="stat-value">0만</div></div>
-                        <div class="stat"><div class="stat-label">이득금</div><div class="stat-value profit">0만</div></div>
-                    </div>
                     <div class="actions">
                         <button class="btn" onclick="event.stopPropagation(); openProject('${p.id}')">진입</button>
                         <button class="btn btn-danger" onclick="event.stopPropagation(); deleteProject('${p.id}')">삭제</button>
@@ -382,6 +376,8 @@
                 document.getElementById('createSuccess').classList.add('show');
                 setTimeout(() => document.getElementById('createSuccess').classList.remove('show'), 2000);
                 loadProjects();
+            } else {
+                alert('오류: ' + error.message);
             }
         }
 
@@ -463,7 +459,6 @@
                     <div>
                         <div style="font-weight: 700;">${ch.name}</div>
                         <small style="color: #999;">${ch.s_name} · ${ch.s_phone}</small>
-                        <br><small style="color: #999;">${ch.s_addr}${ch.s_zip ? ' (' + ch.s_zip + ')' : ''}</small>
                     </div>
                     <button class="btn btn-danger" onclick="deleteChannel('${ch.id}')">삭제</button>
                 </div>
@@ -671,12 +666,6 @@
             XLSX.utils.book_append_sheet(wb, ws, '배송정보');
             ws['!cols'] = Array(26).fill({ wch: 15 });
             XLSX.writeFile(wb, currentProject.name + '_' + new Date().toISOString().split('T')[0] + '.xlsx');
-            if (confirm('배송한 항목들을 완료 표시하시겠습니까?')) {
-                exportSales.forEach(async s => {
-                    await supabase.from('sales').update({ is_shipped: true }).eq('id', s.id);
-                });
-                loadSales();
-            }
         }
     </script>
 </body>
