@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>프로젝트 판매 관리</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
+        .login-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); z-index: 1000; }
+        .login-screen.hidden { display: none; }
+        .login-box { background: white; border-radius: 12px; padding: 40px; box-shadow: 0 8px 32px rgba(0,0,0,0.2); width: 100%; max-width: 350px; }
+        .login-box h1 { color: #667eea; text-align: center; margin-bottom: 10px; font-size: 2em; }
+        .login-box p { color: #999; text-align: center; margin-bottom: 30px; }
+        .login-box input { width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 6px; margin-bottom: 20px; font-size: 14px; }
+        .login-box button { width: 100%; padding: 12px; background: #667eea; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; }
+        .login-box button:hover { background: #764ba2; }
+        .error { color: #ef4444; text-align: center; margin-bottom: 15px; font-size: 13px; display: none; }
+        .error.show { display: block; }
+        .main { display: none; }
+        .main.show { display: block; }
+        .logout-btn { position: fixed; top: 20px; right: 20px; padding: 10px 20px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; z-index: 100; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        h1 { text-align: center; color: white; margin-bottom: 30px; font-size: 2.5em; text-shadow: 2px 2px 4px rgba(0,0,0,0.2); }
+        h2 { color: #667eea; margin-bottom: 20px; margin-top: 0; }
+        h3 { color: #667eea; margin-bottom: 15px; margin-top: 20px; }
+        h4 { color: #667eea; margin-bottom: 15px; }
+        .section { background: white; border-radius: 12px; padding: 30px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); margin-bottom: 30px; }
+        .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 600; color: #555; }
+        input, select, textarea { width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 6px; font-size: 14px; font-family: inherit; }
+        input:focus, select:focus, textarea:focus { outline: none; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1); }
+        .btn { padding: 12px 24px; background: #667eea; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; }
+        .btn:hover { background: #764ba2; }
+        .btn-danger { background: #ef4444; }
+        .btn-danger:hover { background: #dc2626; }
+        .projects-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+        .project-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); cursor: pointer; border-left: 4px solid #667eea; transition: all 0.3s; }
+        .project-card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3); }
+        .project-name { font-size: 1.3em; font-weight: 700; margin-bottom: 10px; }
+        .project-date { font-size: 0.85em; color: #999; margin-bottom: 15px; }
+        .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .stat { background: #f9f9f9; padding: 10px; border-radius: 6px; text-align: center; }
+        .stat-label { font-size: 0.75em; color: #999; }
+        .stat-value { font-size: 1.2em; font-weight: 700; color: #667eea; }
+        .stat-value.profit { color: #10b981; }
+        .actions { display: flex; gap: 8px; }
+        .actions .btn { flex: 1; padding: 8px 12px; font-size: 13px; }
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #e0e0e0; overflow-x: auto; }
+        .tab-btn { padding: 12px 20px; background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer; font-size: 14px; font-weight: 600; color: #999; }
+        .tab-btn.active { color: #667eea; border-bottom-color: #667eea; }
+        .tab { display: none; }
+        .tab.active { display: block; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 13px; }
+        th { background: #f3f4f6; padding: 12px; text-align: left; font-weight: 600; border-bottom: 2px solid #e5e7eb; }
+        td { padding: 12px; border-bottom: 1px solid #e5e7eb; }
+        .empty { text-align: center; padding: 40px; color: #999; }
+        .success { background: #d1fae5; color: #065f46; padding: 15px; border-radius: 6px; margin-bottom: 20px; display: none; }
+        .success.show { display: block; }
+        .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 30px; }
+        .stat-card { background: #f9f9f9; padding: 15px; border-radius: 6px; border-left: 4px solid #667eea; text-align: center; }
+        .stat-card-label { font-size: 12px; color: #999; margin-bottom: 5px; }
+        .stat-card-value { font-size: 1.5em; font-weight: 700; color: #667eea; }
+        .stat-card-value.profit { color: #10b981; }
+        @media (max-width: 768px) { .form-row { grid-template-columns: 1fr; } .projects-grid { grid-template-columns: 1fr; } .logout-btn { position: static; margin-bottom: 20px; } }
+    </style>
+</head>
+<body>
+    <div class="login-screen" id="loginScreen">
+        <div class="login-box">
+            <h1>🔐 관리자</h1>
+            <p>프로젝트 판매 관리</p>
+            <div class="error" id="loginError"></div>
+            <form onsubmit="login(event)">
+                <input type="password" id="pwd" placeholder="비밀번호" autofocus>
+                <button type="submit" class="btn" style="width: 100%;">로그인</button>
+            </form>
+            <p style="text-align: center; margin-top: 20px; font-size: 12px; color: #999;">
+                기본 비밀번호: <code style="background: #f0f0f0; padding: 2px 6px; border-radius: 3px;">admin</code>
+            </p>
+        </div>
+    </div>
+
+    <div class="main" id="main">
+        <button class="logout-btn" onclick="logout()">로그아웃</button>
+        <div class="container">
+            <h1>🎯 프로젝트 판매 관리</h1>
+
+            <div id="listView">
+                <div class="section">
+                    <h2>새 프로젝트 생성</h2>
+                    <div class="success" id="createSuccess">✅ 프로젝트가 생성되었습니다!</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>프로젝트명 *</label>
+                            <input type="text" id="projectName" placeholder="예: 타로카드 스티커 세트">
+                        </div>
+                    </div>
+                    <button class="btn" onclick="createProject()" style="width: 100%; padding: 15px;">✅ 프로젝트 생성</button>
+                </div>
+
+                <h2>프로젝트 목록</h2>
+                <div class="projects-grid" id="projectList"></div>
+            </div>
+
+            <div id="detailView" style="display: none;">
+                <div class="section">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px; border-bottom: 2px solid #e0e0e0; padding-bottom: 20px;">
+                        <div>
+                            <h1 style="margin: 0; color: #333; text-shadow: none; font-size: 2em; text-align: left;" id="projName">프로젝트명</h1>
+                            <p style="color: #999; margin-top: 5px; margin-bottom: 0;" id="projDate">생성일</p>
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn btn-danger" onclick="backToList()">← 목록으로</button>
+                            <button class="btn btn-danger" onclick="deleteCurrentProject()">삭제</button>
+                        </div>
+                    </div>
+
+                    <div class="stat-grid" id="detailStats"></div>
+
+                    <div class="tabs">
+                        <button class="tab-btn active" onclick="showTab('sales', this)">💰 판매 입력</button>
+                        <button class="tab-btn" onclick="showTab('history', this)">📋 내역</button>
+                        <button class="tab-btn" onclick="showTab('channels', this)">🛍️ 채널</button>
+                        <button class="tab-btn" onclick="showTab('export', this)">📥 배송</button>
+                        <button class="tab-btn" onclick="showTab('settlement', this)">✅ 정산</button>
+                    </div>
+
+                    <div id="sales" class="tab active">
+                        <h3>판매 입력</h3>
+                        <div class="success" id="saleSuccess">✅ 판매가 기록되었습니다!</div>
+                        <div class="form-group">
+                            <label>판매 채널 *</label>
+                            <select id="channelSelect">
+                                <option value="">-- 판매 채널 선택 --</option>
+                            </select>
+                        </div>
+                        <div style="background: #f0f9ff; padding: 15px; border-radius: 6px; border-left: 4px solid #3b82f6; margin-bottom: 20px;">
+                            <h4 style="margin-top: 0;">가격 정보</h4>
+                            <div class="form-row">
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label>원가 (개당) *</label>
+                                    <input type="number" id="cost" placeholder="5000" min="0">
+                                </div>
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label>판매가 (개당) *</label>
+                                    <input type="number" id="price" placeholder="15000" min="0">
+                                </div>
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label>배송비 (개당) *</label>
+                                    <input type="number" id="shipping" placeholder="3000" min="0">
+                                </div>
+                            </div>
+                        </div>
+                        <h4>받는이 정보</h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>받는이 이름 *</label>
+                                <input type="text" id="custName" placeholder="고객명">
+                            </div>
+                            <div class="form-group">
+                                <label>받는이 전화 *</label>
+                                <input type="tel" id="custPhone" placeholder="010-1234-5678">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>받는이 주소 *</label>
+                                <input type="text" id="custAddr" placeholder="주소">
+                            </div>
+                            <div class="form-group">
+                                <label>우편번호</label>
+                                <input type="text" id="custZip" placeholder="우편번호">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>요청사항</label>
+                            <textarea id="custMemo" placeholder="요청사항" rows="2"></textarea>
+                        </div>
+                        <h4>상품 정보</h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>상품명 *</label>
+                                <input type="text" id="prodName" placeholder="상품명">
+                            </div>
+                            <div class="form-group">
+                                <label>수량 *</label>
+                                <input type="number" id="qty" value="1" min="1">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>크기</label>
+                                <select id="size">
+                                    <option value="">선택 안함</option>
+                                    <option value="소">소</option>
+                                    <option value="중">중</option>
+                                    <option value="대">대</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>상품 가액</label>
+                                <input type="number" id="prodVal" placeholder="0" min="0">
+                            </div>
+                        </div>
+                        <button class="btn" onclick="addSale()" style="width: 100%; padding: 15px;">✅ 판매 기록</button>
+                    </div>
+
+                    <div id="history" class="tab">
+                        <h3>판매 내역</h3>
+                        <div id="historyTable"></div>
+                    </div>
+
+                    <div id="channels" class="tab">
+                        <h3>판매 채널 관리</h3>
+                        <div style="margin-bottom: 30px;">
+                            <h4>새 채널 추가</h4>
+                            <div class="form-group">
+                                <label>채널명 *</label>
+                                <input type="text" id="chName" placeholder="온라인샵, 인스타 등">
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>보낸이 이름 *</label>
+                                    <input type="text" id="sName" placeholder="필소굿">
+                                </div>
+                                <div class="form-group">
+                                    <label>보낸이 전화 *</label>
+                                    <input type="tel" id="sPhone" placeholder="070-8095-1415">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>보낸이 주소 *</label>
+                                    <input type="text" id="sAddr" placeholder="인천시 산청로 60">
+                                </div>
+                                <div class="form-group">
+                                    <label>우편번호</label>
+                                    <input type="text" id="sZip" placeholder="12345">
+                                </div>
+                            </div>
+                            <button class="btn" onclick="addChannel()" style="width: 100%; padding: 15px;">➕ 채널 추가</button>
+                        </div>
+                        <h4>등록된 채널</h4>
+                        <div id="channelList"></div>
+                    </div>
+
+                    <div id="export" class="tab">
+                        <h3>배송대행사 엑셀 내보내기</h3>
+                        <div class="form-group">
+                            <label>채널 선택</label>
+                            <select id="expChannel">
+                                <option value="all">전체</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>배송 상태</label>
+                            <select id="expStatus">
+                                <option value="pending">미배송만</option>
+                                <option value="all">모두</option>
+                            </select>
+                        </div>
+                        <button class="btn" onclick="exportExcel()" style="width: 100%; padding: 15px;">📥 엑셀 내보내기</button>
+                    </div>
+
+                    <div id="settlement" class="tab">
+                        <h3>정산</h3>
+                        <div style="background: #f0fdf4; border: 2px solid #10b981; border-radius: 6px; padding: 20px; margin-bottom: 20px;">
+                            <table style="width: 100%;">
+                                <tr><td><strong>판매건수</strong></td><td style="text-align: right;" id="sSales"><strong>0</strong></td></tr>
+                                <tr><td><strong>판매액</strong></td><td style="text-align: right;" id="sRevenue"><strong>0원</strong></td></tr>
+                                <tr><td><strong>원가</strong></td><td style="text-align: right;" id="sCost"><strong>0원</strong></td></tr>
+                                <tr style="background: #ecfdf5;"><td><strong>이득금</strong></td><td style="text-align: right; color: #10b981;" id="sProfit"><strong>0원</strong></td></tr>
+                            </table>
+                        </div>
+                        <h4>채널별</h4>
+                        <div id="channelSettlement"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-compat/app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-compat/firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-compat/auth.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.min.js"></script>
+
+    <script>
+        let db, auth, userId = null, currentProject = null, projects = [], channels = [], sales = [];
+
+        function initFirebase() {
+            const firebaseConfig = {
+                apiKey: "AIzaSyDAoUiAJG9nGiHYoWS8C5e3nGdZYInJlDw",
+                authDomain: "skzgoods-1a3b0.firebaseapp.com",
+                projectId: "skzgoods-1a3b0",
+                storageBucket: "skzgoods-1a3b0.firebasestorage.app",
+                messagingSenderId: "45119759832",
+                appId: "1:45119759832:web:e226cef7605008e8937ead"
+            };
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.firestore();
+            auth = firebase.auth();
+        }
+
+        window.login = function(e) {
+            e.preventDefault();
+            const pwd = document.getElementById('pwd').value;
+            if (pwd !== 'admin') {
+                const err = document.getElementById('loginError');
+                err.textContent = '비밀번호가 잘못되었습니다';
+                err.classList.add('show');
+                setTimeout(() => err.classList.remove('show'), 3000);
+                return;
+            }
+            auth.signInAnonymously().then(user => {
+                userId = user.user.uid;
+                document.getElementById('loginScreen').classList.add('hidden');
+                document.getElementById('main').classList.add('show');
+                loadProjects();
+            }).catch(err => {
+                alert('로그인 오류: ' + err.message);
+            });
+        }
+
+        window.logout = function() {
+            if (confirm('로그아웃 하시겠습니까?')) {
+                auth.signOut().then(() => {
+                    userId = null;
+                    document.getElementById('loginScreen').classList.remove('hidden');
+                    document.getElementById('main').classList.remove('show');
+                    document.getElementById('pwd').value = '';
+                    document.getElementById('pwd').focus();
+                });
+            }
+        }
+
+        function loadProjects() {
+            db.collection('projects').where('userId', '==', userId).onSnapshot(snap => {
+                projects = [];
+                snap.forEach(doc => {
+                    projects.push({ id: doc.id, ...doc.data() });
+                });
+                showProjects();
+            });
+        }
+
+        function showProjects() {
+            const list = document.getElementById('projectList');
+            if (projects.length === 0) {
+                list.innerHTML = '<div class="empty" style="grid-column: 1/-1;">프로젝트가 없습니다</div>';
+                return;
+            }
+            list.innerHTML = projects.map(p => `
+                <div class="project-card" onclick="openProject('${p.id}')">
+                    <div class="project-name">${p.name}</div>
+                    <div class="project-date">${p.createdAt}</div>
+                    <div class="stats">
+                        <div class="stat"><div class="stat-label">판매</div><div class="stat-value">0</div></div>
+                        <div class="stat"><div class="stat-label">판매액</div><div class="stat-value">0만</div></div>
+                        <div class="stat"><div class="stat-label">원가</div><div class="stat-value">0만</div></div>
+                        <div class="stat"><div class="stat-label">이득금</div><div class="stat-value profit">0만</div></div>
+                    </div>
+                    <div class="actions">
+                        <button class="btn" onclick="event.stopPropagation(); openProject('${p.id}')">진입</button>
+                        <button class="btn btn-danger" onclick="event.stopPropagation(); deleteProject('${p.id}')">삭제</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        window.createProject = function() {
+            const name = document.getElementById('projectName').value.trim();
+            if (!name) { alert('프로젝트명을 입력해주세요'); return; }
+            db.collection('projects').add({
+                userId: userId,
+                name: name,
+                createdAt: new Date().toLocaleDateString()
+            }).then(() => {
+                document.getElementById('projectName').value = '';
+                document.getElementById('createSuccess').classList.add('show');
+                setTimeout(() => document.getElementById('createSuccess').classList.remove('show'), 2000);
+            });
+        }
+
+        window.openProject = function(projectId) {
+            currentProject = projects.find(p => p.id === projectId);
+            document.getElementById('listView').style.display = 'none';
+            document.getElementById('detailView').style.display = 'block';
+            document.getElementById('projName').textContent = currentProject.name;
+            document.getElementById('projDate').textContent = '생성일: ' + currentProject.createdAt;
+            loadChannels();
+            loadSales();
+        }
+
+        function loadChannels() {
+            db.collection('channels').where('projectId', '==', currentProject.id).onSnapshot(snap => {
+                channels = [];
+                snap.forEach(doc => channels.push({ id: doc.id, ...doc.data() }));
+                updateChannelSelects();
+                showChannels();
+            });
+        }
+
+        function loadSales() {
+            db.collection('sales').where('projectId', '==', currentProject.id).onSnapshot(snap => {
+                sales = [];
+                snap.forEach(doc => sales.push({ id: doc.id, ...doc.data() }));
+                updateStats();
+                showHistory();
+            });
+        }
+
+        function updateChannelSelects() {
+            const select = document.getElementById('channelSelect');
+            const expSelect = document.getElementById('expChannel');
+            select.innerHTML = '<option value="">-- 판매 채널 선택 --</option>';
+            expSelect.innerHTML = '<option value="all">전체</option>';
+            channels.forEach(ch => {
+                select.innerHTML += `<option value="${ch.id}">${ch.name}</option>`;
+                expSelect.innerHTML += `<option value="${ch.id}">${ch.name}</option>`;
+            });
+        }
+
+        window.addChannel = function() {
+            const name = document.getElementById('chName').value.trim();
+            const sName = document.getElementById('sName').value.trim();
+            const sPhone = document.getElementById('sPhone').value.trim();
+            const sAddr = document.getElementById('sAddr').value.trim();
+            const sZip = document.getElementById('sZip').value.trim();
+            if (!name || !sName || !sPhone || !sAddr) { alert('필수 정보를 입력해주세요'); return; }
+            db.collection('channels').add({
+                projectId: currentProject.id,
+                name, sName, sPhone, sAddr, sZip
+            }).then(() => {
+                document.getElementById('chName').value = '';
+                document.getElementById('sName').value = '';
+                document.getElementById('sPhone').value = '';
+                document.getElementById('sAddr').value = '';
+                document.getElementById('sZip').value = '';
+            });
+        }
+
+        function showChannels() {
+            const list = document.getElementById('channelList');
+            if (channels.length === 0) {
+                list.innerHTML = '<div class="empty">등록된 채널이 없습니다</div>';
+                return;
+            }
+            list.innerHTML = channels.map(ch => `
+                <div style="background: #f9f9f9; border: 1px solid #e0e0e0; border-radius: 6px; padding: 15px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="font-weight: 700;">${ch.name}</div>
+                        <small style="color: #999;">${ch.sName} · ${ch.sPhone}</small>
+                        <br><small style="color: #999;">${ch.sAddr}${ch.sZip ? ' (' + ch.sZip + ')' : ''}</small>
+                    </div>
+                    <button class="btn btn-danger" onclick="deleteChannel('${ch.id}')">삭제</button>
+                </div>
+            `).join('');
+        }
+
+        window.addSale = function() {
+            const channelId = document.getElementById('channelSelect').value;
+            const cost = parseInt(document.getElementById('cost').value) || 0;
+            const price = parseInt(document.getElementById('price').value) || 0;
+            const shipping = parseInt(document.getElementById('shipping').value) || 0;
+            const custName = document.getElementById('custName').value.trim();
+            const custPhone = document.getElementById('custPhone').value.trim();
+            const custAddr = document.getElementById('custAddr').value.trim();
+            const custZip = document.getElementById('custZip').value.trim();
+            const custMemo = document.getElementById('custMemo').value.trim();
+            const prodName = document.getElementById('prodName').value.trim();
+            const qty = parseInt(document.getElementById('qty').value) || 1;
+            const size = document.getElementById('size').value;
+            const prodVal = parseInt(document.getElementById('prodVal').value) || 0;
+
+            if (!channelId || cost === 0 || price === 0 || shipping === 0 || !custName || !custPhone || !custAddr || !prodName) {
+                alert('필수 정보를 입력해주세요');
+                return;
+            }
+
+            db.collection('sales').add({
+                projectId: currentProject.id,
+                channelId, cost, price, shipping,
+                custName, custPhone, custAddr, custZip, custMemo,
+                prodName, qty, size, prodVal,
+                isShipped: false,
+                createdAt: new Date().toLocaleString()
+            }).then(() => {
+                document.getElementById('cost').value = '';
+                document.getElementById('price').value = '';
+                document.getElementById('shipping').value = '';
+                document.getElementById('custName').value = '';
+                document.getElementById('custPhone').value = '';
+                document.getElementById('custAddr').value = '';
+                document.getElementById('custZip').value = '';
+                document.getElementById('custMemo').value = '';
+                document.getElementById('prodName').value = '';
+                document.getElementById('qty').value = '1';
+                document.getElementById('size').value = '';
+                document.getElementById('prodVal').value = '';
+                document.getElementById('saleSuccess').classList.add('show');
+                setTimeout(() => document.getElementById('saleSuccess').classList.remove('show'), 2000);
+            });
+        }
+
+        function showHistory() {
+            const table = document.getElementById('historyTable');
+            if (sales.length === 0) {
+                table.innerHTML = '<div class="empty">판매 기록이 없습니다</div>';
+                return;
+            }
+            let html = '<table><thead><tr><th>고객명</th><th>전화</th><th>주소</th><th>상품</th><th>수량</th><th>채널</th><th>판매액</th><th>이득금</th><th>배송</th><th></th></tr></thead><tbody>';
+            sales.forEach(s => {
+                const ch = channels.find(c => c.id === s.channelId);
+                const revenue = s.price * s.qty;
+                const profit = revenue - (s.cost * s.qty);
+                html += `<tr><td>${s.custName}</td><td>${s.custPhone}</td><td style="font-size: 12px;">${s.custAddr}</td><td>${s.prodName}</td><td>${s.qty}</td><td>${ch ? ch.name : '삭제됨'}</td><td>${revenue.toLocaleString()}원</td><td style="color: #10b981; font-weight: 600;">${profit.toLocaleString()}원</td><td><input type="checkbox" ${s.isShipped ? 'checked' : ''} onchange="toggleShipped('${s.id}')"></td><td><button class="btn btn-danger" style="padding: 4px 8px; font-size: 12px;" onclick="deleteSale('${s.id}')">삭제</button></td></tr>`;
+            });
+            html += '</tbody></table>';
+            table.innerHTML = html;
+        }
+
+        function updateStats() {
+            const totalSales = sales.length;
+            const shippedCount = sales.filter(s => s.isShipped).length;
+            let totalRevenue = 0, totalCost = 0;
+            sales.forEach(s => {
+                totalRevenue += s.price * s.qty;
+                totalCost += s.cost * s.qty;
+            });
+            const totalProfit = totalRevenue - totalCost;
+
+            document.getElementById('detailStats').innerHTML = `
+                <div class="stat-card"><div class="stat-card-label">판매건수</div><div class="stat-card-value">${totalSales}</div></div>
+                <div class="stat-card"><div class="stat-card-label">배송완료</div><div class="stat-card-value">${shippedCount}</div></div>
+                <div class="stat-card"><div class="stat-card-label">총 판매액</div><div class="stat-card-value">${totalRevenue.toLocaleString()}원</div></div>
+                <div class="stat-card"><div class="stat-card-label">총 이득금</div><div class="stat-card-value profit">${totalProfit.toLocaleString()}원</div></div>
+            `;
+
+            document.getElementById('sSales').textContent = totalSales;
+            document.getElementById('sRevenue').textContent = totalRevenue.toLocaleString() + '원';
+            document.getElementById('sCost').textContent = totalCost.toLocaleString() + '원';
+            document.getElementById('sProfit').textContent = totalProfit.toLocaleString() + '원';
+
+            let channelHtml = '<table><thead><tr><th>채널명</th><th>판매</th><th>판매액</th><th>원가</th><th>이득금</th></tr></thead><tbody>';
+            channels.forEach(ch => {
+                const chSales = sales.filter(s => s.channelId === ch.id);
+                const chRevenue = chSales.reduce((sum, s) => sum + (s.price * s.qty), 0);
+                const chCost = chSales.reduce((sum, s) => sum + (s.cost * s.qty), 0);
+                const chProfit = chRevenue - chCost;
+                channelHtml += `<tr><td><strong>${ch.name}</strong></td><td>${chSales.length}</td><td>${chRevenue.toLocaleString()}원</td><td>${chCost.toLocaleString()}원</td><td style="color: #10b981; font-weight: 700;">${chProfit.toLocaleString()}원</td></tr>`;
+            });
+            channelHtml += '</tbody></table>';
+            document.getElementById('channelSettlement').innerHTML = channelHtml;
+        }
+
+        window.toggleShipped = function(saleId) {
+            const sale = sales.find(s => s.id === saleId);
+            db.collection('sales').doc(saleId).update({ isShipped: !sale.isShipped });
+        }
+
+        window.showTab = function(tabName, btn) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(tabName).classList.add('active');
+            btn.classList.add('active');
+        }
+
+        window.backToList = function() {
+            document.getElementById('listView').style.display = 'block';
+            document.getElementById('detailView').style.display = 'none';
+        }
+
+        window.deleteProject = function(id) {
+            if (confirm('프로젝트를 삭제하시겠습니까?')) {
+                db.collection('projects').doc(id).delete();
+                db.collection('channels').where('projectId', '==', id).get().then(snap => {
+                    snap.forEach(doc => doc.ref.delete());
+                });
+                db.collection('sales').where('projectId', '==', id).get().then(snap => {
+                    snap.forEach(doc => doc.ref.delete());
+                });
+            }
+        }
+
+        window.deleteCurrentProject = function() {
+            deleteProject(currentProject.id);
+            backToList();
+        }
+
+        window.deleteChannel = function(id) {
+            if (confirm('채널을 삭제하시겠습니까?')) {
+                db.collection('channels').doc(id).delete();
+                db.collection('sales').where('channelId', '==', id).get().then(snap => {
+                    snap.forEach(doc => doc.ref.delete());
+                });
+            }
+        }
+
+        window.deleteSale = function(id) {
+            if (confirm('판매 기록을 삭제하시겠습니까?')) {
+                db.collection('sales').doc(id).delete();
+            }
+        }
+
+        window.exportExcel = function() {
+            const channelId = document.getElementById('expChannel').value;
+            const status = document.getElementById('expStatus').value;
+            let exportSales = sales;
+            if (channelId !== 'all') {
+                exportSales = exportSales.filter(s => s.channelId === channelId);
+            }
+            if (status === 'pending') {
+                exportSales = exportSales.filter(s => !s.isShipped);
+            }
+            if (exportSales.length === 0) {
+                alert('내보낼 항목이 없습니다');
+                return;
+            }
+            const excelData = exportSales.map((s, i) => {
+                const ch = channels.find(c => c.id === s.channelId);
+                return {
+                    '고객 주문번호': currentProject.name.substring(0, 3) + Date.now() + i,
+                    '고객 주문일시': s.createdAt,
+                    '피킹 위치': '',
+                    '보낸이 이름': ch ? ch.sName : '',
+                    '보낸이 전화번호': ch ? ch.sPhone : '',
+                    '보낸이 주소': ch ? ch.sAddr : '',
+                    '픽업지 건물 출입방법': '',
+                    '픽업지 출입 요청사항': '',
+                    '받는이 이름': s.custName,
+                    '받는이 전화번호': s.custPhone,
+                    '받는이 주소': s.custAddr,
+                    '받는이 건물 출입방법': '',
+                    '받는이 요청사항': s.custMemo,
+                    '상품명': s.prodName,
+                    '상품 수량': s.qty,
+                    '크기타입': s.size,
+                    '아이스박스': '',
+                    '셀러명': ch ? ch.sName : '',
+                    '판매채널': ch ? ch.name : '',
+                    '상품 카테고리': '',
+                    '상품 깨짐주의': '',
+                    '상품 가액': s.prodVal,
+                    '상품 코드': '',
+                    '반품 원송장번호': '',
+                    '보낸이 우편번호': ch ? ch.sZip : '',
+                    '받는이 우편번호': s.custZip
+                };
+            });
+            const ws = XLSX.utils.json_to_sheet(excelData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, '배송정보');
+            ws['!cols'] = Array(26).fill({ wch: 15 });
+            XLSX.writeFile(wb, currentProject.name + '_' + new Date().toISOString().split('T')[0] + '.xlsx');
+            if (confirm('배송한 항목들을 완료 표시하시겠습니까?')) {
+                exportSales.forEach(s => {
+                    db.collection('sales').doc(s.id).update({ isShipped: true });
+                });
+            }
+        }
+
+        // Firebase 초기화
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initFirebase);
+        } else {
+            initFirebase();
+        }
+    </script>
+</body>
+</html>
