@@ -225,8 +225,13 @@
                             <div class="success" id="productSuccess">✅ 물품이 등록되었습니다!</div>
                             <div class="form-row">
                                 <div class="form-group"><label>물품명 *</label><input type="text" id="prodItemName" placeholder="예: A타입 스티커 세트"></div>
-                                <div class="form-group"><label>설명 (선택)</label><input type="text" id="prodItemDesc" placeholder="예: 5종 구성, 무광 코팅"></div>
+                                <div class="form-group"><label>옵션 (선택)</label><input type="text" id="prodItemOption" placeholder="예: 무광, 유광, 홀로그램"></div>
                             </div>
+                            <div class="form-row">
+                                <div class="form-group"><label>원가 (개당) *</label><input type="number" id="prodItemCost" placeholder="5000" min="0"></div>
+                                <div class="form-group"><label>구매 장소 (선택)</label><input type="text" id="prodItemPlace" placeholder="예: 마플, 위탁업체명"></div>
+                            </div>
+                            <div class="form-group"><label>기타 메모 (선택)</label><input type="text" id="prodItemMemo" placeholder="예: 재고 50개, 주의사항 등"></div>
                             <button class="btn" onclick="addProduct()" style="width:100%;padding:15px;">➕ 물품 추가</button>
                         </div>
                         <h4>등록된 물품 목록</h4>
@@ -443,8 +448,12 @@
             el.innerHTML = products.map(p => `
                 <div class="product-item">
                     <div>
-                        <div class="product-item-name">📦 ${p.name}</div>
-                        ${p.desc ? `<div class="product-item-desc">${p.desc}</div>` : ''}
+                        <div class="product-item-name">📦 ${p.name}${p.option ? ` <span style="font-size:12px;color:#667eea;font-weight:400;">[${p.option}]</span>` : ''}</div>
+                        <div class="product-item-desc" style="display:flex;gap:16px;flex-wrap:wrap;margin-top:4px;">
+                            <span>💰 원가: <strong>${p.cost ? Number(p.cost).toLocaleString() + '원' : '미입력'}</strong></span>
+                            ${p.place ? `<span>🏪 ${p.place}</span>` : ''}
+                            ${p.memo ? `<span>📝 ${p.memo}</span>` : ''}
+                        </div>
                     </div>
                     <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}')">삭제</button>
                 </div>
@@ -459,16 +468,12 @@
             }
             grid.innerHTML = products.map(p => `
                 <div class="product-select-card" id="pcard-${p.id}" onclick="toggleProductCard('${p.id}')">
-                    <div class="prod-name">📦 ${p.name}</div>
-                    ${p.desc ? `<div style="font-size:12px;color:#999;">${p.desc}</div>` : ''}
+                    <div class="prod-name">📦 ${p.name}${p.option ? ` <span style="font-size:11px;color:#667eea;">[${p.option}]</span>` : ''}</div>
+                    ${p.cost ? `<div style="font-size:12px;color:#999;margin-top:2px;">원가 ${Number(p.cost).toLocaleString()}원</div>` : ''}
                     <div class="prod-inputs">
                         <div style="flex:1;">
                             <label>수량</label>
                             <input type="number" id="pqty-${p.id}" value="1" min="1" onclick="event.stopPropagation()">
-                        </div>
-                        <div style="flex:1;">
-                            <label>원가(개당)</label>
-                            <input type="number" id="pcost-${p.id}" placeholder="5000" min="0" onclick="event.stopPropagation()">
                         </div>
                         <div style="flex:1;">
                             <label>판매가(개당)</label>
@@ -486,13 +491,16 @@
 
         window.addProduct = async function() {
             const name = document.getElementById('prodItemName').value.trim();
-            const desc = document.getElementById('prodItemDesc').value.trim();
+            const option = document.getElementById('prodItemOption').value.trim();
+            const cost = parseInt(document.getElementById('prodItemCost').value) || 0;
+            const place = document.getElementById('prodItemPlace').value.trim();
+            const memo = document.getElementById('prodItemMemo').value.trim();
             if (!name) { alert('물품명을 입력해주세요'); return; }
+            if (!cost) { alert('원가를 입력해주세요'); return; }
             await addDoc(collection(db, 'products'), {
-                project_id: currentProject.id, name, desc
+                project_id: currentProject.id, name, option, cost, place, memo
             });
-            document.getElementById('prodItemName').value = '';
-            document.getElementById('prodItemDesc').value = '';
+            ['prodItemName','prodItemOption','prodItemCost','prodItemPlace','prodItemMemo'].forEach(id => document.getElementById(id).value = '');
             document.getElementById('productSuccess').classList.add('show');
             setTimeout(() => document.getElementById('productSuccess').classList.remove('show'), 2000);
             loadProducts();
@@ -567,21 +575,24 @@
             const size = document.getElementById('size').value;
             const prodVal = parseInt(document.getElementById('prodVal').value) || 0;
 
-            // 선택된 물품 수집
+            // 선택된 물품 수집 (원가는 물품 등록값에서 자동 가져옴)
             const selectedItems = [];
+            let hasError = false;
             products.forEach(p => {
                 const card = document.getElementById('pcard-' + p.id);
                 if (card && card.classList.contains('selected')) {
                     const qty = parseInt(document.getElementById('pqty-' + p.id).value) || 1;
-                    const cost = parseInt(document.getElementById('pcost-' + p.id).value) || 0;
+                    const cost = p.cost || 0; // 물품 관리에서 등록한 원가 자동 사용
                     const price = parseInt(document.getElementById('pprice-' + p.id).value) || 0;
-                    if (cost === 0 || price === 0) {
-                        alert(`"${p.name}"의 원가와 판매가를 입력해주세요`);
+                    if (price === 0) {
+                        alert('"' + p.name + '"의 판매가를 입력해주세요');
+                        hasError = true;
                         return;
                     }
                     selectedItems.push({ prod_id: p.id, prod_name: p.name, qty, cost, price });
                 }
             });
+            if (hasError) return;
 
             if (!channelId) { alert('판매 채널을 선택해주세요'); return; }
             if (selectedItems.length === 0) { alert('구매 물품을 하나 이상 선택해주세요'); return; }
