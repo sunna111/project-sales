@@ -594,30 +594,39 @@
     window.addToResCart = function() {
         if(!resCurName){alert('상품을 선택해주세요');return;}
         const qty=parseInt(document.getElementById('resQtyInput').value)||1;
+        const prod=products.find(p=>p.name===resCurName);
+        const cost=prod?prod.cost||0:0;
         const key=resCurName+'|'+resCurMember;
         const existing=resCart.find(c=>c.key===key);
         if(existing)existing.qty+=qty;
-        else resCart.push({key,prod_name:resCurName,member:resCurMember,qty});
+        else resCart.push({key,prod_name:resCurName,member:resCurMember,qty,cost});
         document.getElementById('resProductSelect').value='';
         document.getElementById('resQtyInput').value='1';
         document.getElementById('resMemberStep').style.display='none';
         document.getElementById('resAddRow').style.display='none';
         resCurName=''; resCurMember='';
         renderResCart();
+        updateResAmount(); // 금액 자동 계산
     }
     function renderResCart() {
         const el=document.getElementById('resCartBox');
         if(!el) return;
         if(!resCart.length){el.innerHTML='<div style="color:#999;font-size:13px;padding:4px 0;">아직 담긴 물품이 없습니다</div>';return;}
+        const total=resCart.reduce((s,c)=>s+c.cost*c.qty,0);
         el.innerHTML=`<div class="cart-box-res">
             <div style="font-weight:700;color:#10b981;margin-bottom:8px;">🛒 담은 예약 물품</div>
             ${resCart.map((c,i)=>`<div class="cart-item">
-                <span>📦 ${c.prod_name}${c.member?' '+c.member:''} × ${c.qty}개</span>
+                <span>📦 ${c.prod_name}${c.member?' '+c.member:''} × ${c.qty}개 <span style="color:#999;">(${(c.cost*c.qty).toLocaleString()}원)</span></span>
                 <button class="btn btn-danger btn-sm" onclick="removeResCart(${i})">✕</button>
             </div>`).join('')}
+            <div style="text-align:right;font-weight:700;color:#10b981;margin-top:8px;font-size:14px;">합계: ${total.toLocaleString()}원 → 금액 자동 입력됨 ✅</div>
         </div>`;
     }
-    window.removeResCart = function(i){resCart.splice(i,1);renderResCart();}
+    window.removeResCart = function(i){resCart.splice(i,1);renderResCart();updateResAmount();}
+    function updateResAmount() {
+        const total=resCart.reduce((s,c)=>s+c.cost*c.qty,0);
+        document.getElementById('resAmount').value=total||'';
+    }
 
     // ── 예약 관리 ──
     async function loadReservations() {
