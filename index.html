@@ -101,7 +101,42 @@
         .res-select-item { display:flex; justify-content:space-between; align-items:center; padding:10px 12px; background:white; border:2px solid #e0e0e0; border-radius:6px; cursor:pointer; margin-bottom:6px; transition:all 0.15s; font-size:13px; }
         .res-select-item:hover { border-color:#667eea; background:#f0f0ff; }
 
-        @media (max-width:768px) { .form-row { grid-template-columns:1fr; } .projects-grid { grid-template-columns:1fr; } .logout-btn { position:static; margin-bottom:10px; } .user-info { position:static; margin-bottom:10px; display:inline-block; } }
+        @media (max-width:768px) {
+            body { padding: 12px; }
+            .form-row { grid-template-columns:1fr; }
+            .projects-grid { grid-template-columns:1fr; }
+            /* 상단 유저정보/로그아웃 모바일 */
+            .logout-btn { position:static; margin-bottom:8px; width:100%; }
+            .user-info { position:static; margin-bottom:6px; display:block; text-align:center; }
+            .top-bar { display:flex; gap:8px; margin-bottom:12px; }
+            .top-bar .user-info { flex:1; margin:0; }
+            .top-bar .logout-btn { width:auto; margin:0; flex-shrink:0; }
+            /* 프로젝트 상세 헤더 */
+            .detail-header { flex-direction:column !important; gap:12px !important; }
+            .detail-header h1 { font-size:1.4em !important; }
+            .detail-header-btns { display:flex; gap:8px; width:100%; }
+            .detail-header-btns button { flex:1; padding:10px 8px !important; font-size:13px !important; }
+            /* 통계 카드 2열 */
+            .stat-grid { grid-template-columns:1fr 1fr !important; gap:10px; }
+            .stat-card-value { font-size:1.2em; }
+            /* 탭 스크롤 */
+            .tabs { gap:0; }
+            .tab-btn { padding:10px 12px; font-size:12px; }
+            /* 섹션 패딩 */
+            .section { padding:16px; }
+            h1 { font-size:1.8em; margin-bottom:20px; }
+            h3 { margin-top:12px; }
+            /* 장바구니 */
+            .cart-box, .cart-box-res { padding:10px; }
+            /* 예약 카드 */
+            .reservation-card { flex-direction:column; }
+            .reservation-card > div:last-child { flex-direction:row !important; flex-wrap:wrap; justify-content:flex-start !important; }
+            /* select-step-box */
+            .select-step-box { padding:12px; }
+            /* 테이블 가로 스크롤 */
+            #historyTable { overflow-x:auto; display:block; }
+            table { min-width:600px; }
+        }
     </style>
 </head>
 <body>
@@ -130,8 +165,10 @@
 </div>
 
 <div class="main" id="main">
-    <div class="user-info" id="userInfo">👤</div>
-    <button class="logout-btn" onclick="handleLogout()">로그아웃</button>
+    <div class="top-bar">
+        <div class="user-info" id="userInfo">👤</div>
+        <button class="logout-btn" onclick="handleLogout()">로그아웃</button>
+    </div>
     <div class="container">
         <h1>🎯 프로젝트 판매 관리</h1>
 
@@ -148,13 +185,13 @@
 
         <div id="detailView" style="display:none;">
             <div class="section">
-                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:30px;border-bottom:2px solid #e0e0e0;padding-bottom:20px;">
+                <div class="detail-header" style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;border-bottom:2px solid #e0e0e0;padding-bottom:16px;">
                     <div>
                         <h1 style="margin:0;color:#333;text-shadow:none;font-size:2em;text-align:left;" id="projName"></h1>
                         <p style="color:#999;margin-top:5px;margin-bottom:0;" id="projDate"></p>
                     </div>
-                    <div style="display:flex;gap:10px;">
-                        <button class="btn btn-danger" onclick="backToList()">← 목록으로</button>
+                    <div class="detail-header-btns" style="display:flex;gap:8px;flex-shrink:0;">
+                        <button class="btn btn-danger" onclick="backToList()">← 목록</button>
                         <button class="btn btn-danger" onclick="deleteCurrentProject()">삭제</button>
                     </div>
                 </div>
