@@ -201,8 +201,37 @@
                         <select id="channelSelect"><option value="">-- 판매 채널 선택 --</option></select>
                     </div>
 
-                    <h4>📦 구매 물품 선택 <span style="font-size:12px;color:#999;font-weight:400;">클릭해서 선택 후 판매가 입력</span></h4>
-                    <div id="productSelectGrid" class="product-select-grid"></div>
+                    <h4>📦 구매 물품 선택</h4>
+                    <!-- 1단계: 상품명 선택 -->
+                    <div style="display:flex;gap:10px;margin-bottom:12px;align-items:flex-end;">
+                        <div style="flex:1;">
+                            <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:6px;">① 상품명 선택</label>
+                            <select id="saleProductSelect" onchange="onSaleProductChange()">
+                                <option value="">-- 상품명 선택 --</option>
+                            </select>
+                        </div>
+                    </div>
+                    <!-- 2단계: 멤버 선택 -->
+                    <div id="saleMemberStep" style="display:none;margin-bottom:12px;">
+                        <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:6px;">② 멤버 선택 <span style="color:#999;font-weight:400;">(단독 상품이면 바로 추가)</span></label>
+                        <div id="saleMemberBtns" class="member-btns"></div>
+                    </div>
+                    <!-- 수량 + 판매가 + 추가 버튼 -->
+                    <div id="saleAddRow" style="display:none;margin-bottom:16px;">
+                        <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+                            <div style="flex:1;min-width:80px;">
+                                <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:6px;">수량</label>
+                                <input type="number" id="saleQty" value="1" min="1">
+                            </div>
+                            <div style="flex:2;min-width:120px;">
+                                <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:6px;">판매가 (개당)</label>
+                                <input type="number" id="salePriceInput" placeholder="15000" min="0">
+                            </div>
+                            <button class="btn btn-success" onclick="addToCart()" style="padding:12px 20px;white-space:nowrap;">➕ 담기</button>
+                        </div>
+                    </div>
+                    <!-- 장바구니 -->
+                    <div id="saleCart" style="margin-bottom:16px;"></div>
 
                     <div class="form-group">
                         <label>배송비</label>
@@ -240,8 +269,23 @@
                         <div class="form-group"><label>총 금액 *</label><input type="number" id="resAmount" placeholder="22000" min="0"></div>
 
                         <div class="form-group">
-                            <label>예약 상품 선택 * <span style="font-size:12px;color:#999;font-weight:400;">클릭해서 수량 입력</span></label>
-                            <div id="resProductGrid" class="product-select-grid" style="margin-top:8px;"></div>
+                            <label>예약 상품 선택 * <span style="font-size:12px;color:#999;font-weight:400;">상품명 → 멤버 선택 후 담기</span></label>
+                            <div style="display:flex;gap:10px;margin-bottom:8px;align-items:flex-end;flex-wrap:wrap;">
+                                <div style="flex:2;min-width:120px;">
+                                    <label style="font-size:11px;color:#777;display:block;margin-bottom:4px;">① 상품명</label>
+                                    <select id="resProductSelect" onchange="onResProductChange()"><option value="">-- 상품명 선택 --</option></select>
+                                </div>
+                                <div id="resMemberStep" style="flex:2;min-width:120px;display:none;">
+                                    <label style="font-size:11px;color:#777;display:block;margin-bottom:4px;">② 멤버</label>
+                                    <div id="resMemberBtns" class="member-btns"></div>
+                                </div>
+                                <div style="flex:1;min-width:60px;">
+                                    <label style="font-size:11px;color:#777;display:block;margin-bottom:4px;">수량</label>
+                                    <input type="number" id="resQty" value="1" min="1">
+                                </div>
+                                <button class="btn btn-success btn-sm" onclick="addToResCart()" style="white-space:nowrap;padding:10px 14px;">➕ 담기</button>
+                            </div>
+                            <div id="resCart" style="margin-top:8px;"></div>
                         </div>
 
                         <div class="form-group">
@@ -468,8 +512,8 @@
         const snap = await getDocs(query(collection(db,'products'), where('project_id','==',currentProject.id)));
         products = snap.docs.map(d => ({id:d.id,...d.data()}));
         renderProductList();
-        renderProductSelectGrid('productSelectGrid', true);  // 판매용 (판매가 입력)
-        renderProductSelectGrid('resProductGrid', false);    // 예약용 (수량만)
+        renderSaleProductDropdown();
+        renderResProductDropdown();
     }
 
     function renderProductList() {
@@ -492,31 +536,159 @@
             </div>`).join('');
     }
 
-    // showPrice=true: 판매 입력용(판매가 입력란), false: 예약용(수량만)
-    function renderProductSelectGrid(gridId, showPrice) {
-        const grid = document.getElementById(gridId);
-        if (!grid) return;
-        if (!products.length) {
-            grid.innerHTML = '<div class="no-products-msg">⚠️ 물품 관리 탭에서 먼저 물품을 등록해주세요!</div>'; return;
-        }
-        const prefix = showPrice ? 's' : 'r'; // s=sale, r=reservation
-        grid.innerHTML = products.map(p => `
-            <div class="product-select-card" id="${prefix}pcard-${p.id}" onclick="toggleProductCard('${prefix}','${p.id}')">
-                <div class="prod-name">📦 ${p.name}${p.member ? ` <span class="member-tag">${p.member}</span>` : ''}</div>
-                ${p.cost ? `<div class="prod-cost">원가 ${Number(p.cost).toLocaleString()}원</div>` : ''}
-                <div class="prod-inputs">
-                    <div>
-                        <label>수량</label>
-                        <input type="number" id="${prefix}pqty-${p.id}" value="1" min="1" onclick="event.stopPropagation()">
-                    </div>
-                    ${showPrice ? `<div><label>판매가(개당)</label><input type="number" id="${prefix}pprice-${p.id}" placeholder="15000" min="0" onclick="event.stopPropagation()"></div>` : ''}
-                </div>
-            </div>`).join('');
+    // ── 2단계 선택: 판매 입력용 ──────────────────────────
+    let saleCart = []; // [{prod_id, prod_name, member, qty, cost, price}]
+    let saleSelectedProdName = '';
+    let saleSelectedMember = '';
+
+    function renderSaleProductDropdown() {
+        const sel = document.getElementById('saleProductSelect');
+        if (!sel) return;
+        const names = [...new Set(products.map(p => p.name))];
+        sel.innerHTML = '<option value="">-- 상품명 선택 --</option>' + names.map(n => `<option value="${n}">${n}</option>`).join('');
+        saleCart = [];
+        renderSaleCart();
     }
 
-    window.toggleProductCard = function(prefix, prodId) {
-        document.getElementById(prefix+'pcard-'+prodId).classList.toggle('selected');
+    window.onSaleProductChange = function() {
+        const name = document.getElementById('saleProductSelect').value;
+        saleSelectedProdName = name;
+        saleSelectedMember = '';
+        const memberStep = document.getElementById('saleMemberStep');
+        const addRow = document.getElementById('saleAddRow');
+        if (!name) { memberStep.style.display='none'; addRow.style.display='none'; return; }
+        const matched = products.filter(p => p.name === name);
+        const members = matched.filter(p => p.member).map(p => p.member);
+        if (members.length > 0) {
+            document.getElementById('saleMemberBtns').innerHTML = members.map(m =>
+                `<button class="member-btn" onclick="selectSaleMember(this,'${m}')">${m}</button>`
+            ).join('');
+            memberStep.style.display = 'block';
+            addRow.style.display = 'none';
+        } else {
+            // 단독 상품 → 멤버 없이 바로 수량/가격 입력
+            memberStep.style.display = 'none';
+            addRow.style.display = 'block';
+        }
     }
+
+    window.selectSaleMember = function(btn, member) {
+        document.querySelectorAll('#saleMemberBtns .member-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        saleSelectedMember = member;
+        document.getElementById('saleAddRow').style.display = 'block';
+    }
+
+    window.addToCart = function() {
+        const name = saleSelectedProdName;
+        const member = saleSelectedMember;
+        const qty = parseInt(document.getElementById('saleQty').value) || 1;
+        const price = parseInt(document.getElementById('salePriceInput').value) || 0;
+        if (!name) { alert('상품명을 선택해주세요'); return; }
+        if (!price) { alert('판매가를 입력해주세요'); return; }
+        const prod = products.find(p => p.name === name && (p.member === member || (!p.member && !member)));
+        const cost = prod ? (prod.cost || 0) : 0;
+        const prod_id = prod ? prod.id : '';
+        // 이미 담긴 항목이면 수량 합산
+        const existing = saleCart.find(c => c.prod_name === name && c.member === member);
+        if (existing) { existing.qty += qty; existing.price = price; }
+        else { saleCart.push({ prod_id, prod_name: name, member, qty, cost, price }); }
+        // 초기화
+        document.getElementById('saleProductSelect').value = '';
+        document.getElementById('saleQty').value = '1';
+        document.getElementById('salePriceInput').value = '';
+        document.getElementById('saleMemberStep').style.display = 'none';
+        document.getElementById('saleAddRow').style.display = 'none';
+        saleSelectedProdName = ''; saleSelectedMember = '';
+        renderSaleCart();
+    }
+
+    function renderSaleCart() {
+        const el = document.getElementById('saleCart');
+        if (!saleCart.length) { el.innerHTML = '<div style="color:#999;font-size:13px;padding:8px 0;">아직 담긴 물품이 없습니다</div>'; return; }
+        el.innerHTML = `<div style="background:#f0f0ff;border:2px solid #667eea;border-radius:8px;padding:12px;">
+            <div style="font-weight:700;color:#667eea;margin-bottom:8px;">🛒 담은 물품</div>
+            ${saleCart.map((c,i) => `
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #ddd;">
+                    <span>📦 ${c.prod_name}${c.member?' '+c.member:''} × ${c.qty}개</span>
+                    <span style="color:#667eea;font-weight:600;">${(c.price*c.qty).toLocaleString()}원</span>
+                    <button class="btn btn-danger btn-sm" onclick="removeFromCart(${i})">✕</button>
+                </div>`).join('')}
+            <div style="text-align:right;font-weight:700;margin-top:8px;">합계: ${saleCart.reduce((s,c)=>s+c.price*c.qty,0).toLocaleString()}원</div>
+        </div>`;
+    }
+
+    window.removeFromCart = function(i) { saleCart.splice(i,1); renderSaleCart(); }
+
+    // ── 2단계 선택: 예약 입력용 ──────────────────────────
+    let resCart = [];
+    let resSelectedProdName = '';
+    let resSelectedMember = '';
+
+    function renderResProductDropdown() {
+        const sel = document.getElementById('resProductSelect');
+        if (!sel) return;
+        const names = [...new Set(products.map(p => p.name))];
+        sel.innerHTML = '<option value="">-- 상품명 선택 --</option>' + names.map(n => `<option value="${n}">${n}</option>`).join('');
+        resCart = [];
+        renderResCart();
+    }
+
+    window.onResProductChange = function() {
+        const name = document.getElementById('resProductSelect').value;
+        resSelectedProdName = name;
+        resSelectedMember = '';
+        const memberStep = document.getElementById('resMemberStep');
+        if (!name) { memberStep.style.display='none'; return; }
+        const members = products.filter(p => p.name === name && p.member).map(p => p.member);
+        if (members.length > 0) {
+            document.getElementById('resMemberBtns').innerHTML = members.map(m =>
+                `<button class="member-btn" onclick="selectResMember(this,'${m}')">${m}</button>`
+            ).join('');
+            memberStep.style.display = 'block';
+        } else {
+            memberStep.style.display = 'none';
+        }
+    }
+
+    window.selectResMember = function(btn, member) {
+        document.querySelectorAll('#resMemberBtns .member-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        resSelectedMember = member;
+    }
+
+    window.addToResCart = function() {
+        const name = resSelectedProdName;
+        const member = resSelectedMember;
+        const qty = parseInt(document.getElementById('resQty').value) || 1;
+        if (!name) { alert('상품명을 선택해주세요'); return; }
+        const prod = products.find(p => p.name === name && (p.member === member || (!p.member && !member)));
+        const prod_id = prod ? prod.id : '';
+        const existing = resCart.find(c => c.prod_name === name && c.member === member);
+        if (existing) { existing.qty += qty; }
+        else { resCart.push({ prod_id, prod_name: name, member, qty }); }
+        document.getElementById('resProductSelect').value = '';
+        document.getElementById('resQty').value = '1';
+        document.getElementById('resMemberStep').style.display = 'none';
+        resSelectedProdName = ''; resSelectedMember = '';
+        renderResCart();
+    }
+
+    function renderResCart() {
+        const el = document.getElementById('resCart');
+        if (!el) return;
+        if (!resCart.length) { el.innerHTML='<div style="color:#999;font-size:13px;">아직 담긴 물품이 없습니다</div>'; return; }
+        el.innerHTML = `<div style="background:#f0fff4;border:2px solid #10b981;border-radius:8px;padding:12px;">
+            <div style="font-weight:700;color:#10b981;margin-bottom:8px;">🛒 담은 예약 물품</div>
+            ${resCart.map((c,i) => `
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #ddd;">
+                    <span>📦 ${c.prod_name}${c.member?' '+c.member:''} × ${c.qty}개</span>
+                    <button class="btn btn-danger btn-sm" onclick="removeFromResCart(${i})">✕</button>
+                </div>`).join('')}
+        </div>`;
+    }
+
+    window.removeFromResCart = function(i) { resCart.splice(i,1); renderResCart(); }
 
     window.addProduct = async function() {
         const name = document.getElementById('prodItemName').value.trim();
@@ -629,25 +801,18 @@
     window.loadReservationToSale = function(resId) {
         const res = reservations.find(r => r.id === resId);
         if (!res) return;
-        // 물품 카드 선택 + 수량 세팅
-        products.forEach(p => {
-            const card = document.getElementById('spcard-'+p.id);
-            if (card) card.classList.remove('selected');
-        });
-        (res.items||[]).forEach(item => {
-            const prod = products.find(p => p.id === item.prod_id);
-            if (prod) {
-                const card = document.getElementById('spcard-'+prod.id);
-                if (card) {
-                    card.classList.add('selected');
-                    const qtyEl = document.getElementById('spqty-'+prod.id);
-                    if (qtyEl) qtyEl.value = item.qty;
-                }
-            }
-        });
-        // 이름 자동 입력
+        // 장바구니에 예약 물품 담기 (판매가는 비워둠)
+        saleCart = (res.items||[]).map(item => ({
+            prod_id: item.prod_id,
+            prod_name: item.prod_name,
+            member: item.member||'',
+            qty: item.qty,
+            cost: (products.find(p=>p.id===item.prod_id)||{}).cost||0,
+            price: 0
+        }));
+        renderSaleCart();
         document.getElementById('custName').value = res.name || '';
-        alert(`"${res.name}" 예약자 정보가 불러와졌습니다!\n판매가와 주소를 입력 후 저장해주세요.`);
+        alert(`"${res.name}" 예약자 정보를 불러왔어요!\n각 물품의 판매가를 입력하려면 물품을 다시 담아주세요.\n(장바구니에서 ✕ 후 재입력)`);
     }
 
     window.addReservation = async function() {
@@ -656,18 +821,10 @@
         const amount = parseInt(document.getElementById('resAmount').value) || 0;
         const paid = document.getElementById('resPaid').value;
 
-        const items = [];
-        products.forEach(p => {
-            const card = document.getElementById('rpcard-'+p.id);
-            if (card && card.classList.contains('selected')) {
-                const qty = parseInt(document.getElementById('rpqty-'+p.id).value) || 1;
-                items.push({ prod_id:p.id, prod_name:p.name, member:p.member||'', qty });
-            }
-        });
-
         if (!name) { alert('예약자 이름을 입력해주세요'); return; }
-        if (!items.length) { alert('예약 상품을 선택해주세요'); return; }
+        if (!resCart.length) { alert('예약 상품을 담아주세요'); return; }
         if (!amount) { alert('총 금액을 입력해주세요'); return; }
+        const items = resCart.map(c => ({...c}));
 
         await addDoc(collection(db,'reservations'), {
             project_id: currentProject.id, name, kakao, amount, paid, items,
@@ -678,7 +835,7 @@
         document.getElementById('resKakao').value='';
         document.getElementById('resAmount').value='';
         document.getElementById('resPaid').value='unpaid';
-        products.forEach(p => { const c=document.getElementById('rpcard-'+p.id); if(c) c.classList.remove('selected'); });
+        resCart = []; renderResCart();
         showMsg('resSuccess');
         loadReservations();
     }
@@ -744,22 +901,10 @@
         const size = document.getElementById('size').value;
         const prodVal = parseInt(document.getElementById('prodVal').value)||0;
 
-        const selectedItems = [];
-        let hasError = false;
-        products.forEach(p => {
-            const card = document.getElementById('spcard-'+p.id);
-            if (card && card.classList.contains('selected')) {
-                const qty = parseInt(document.getElementById('spqty-'+p.id).value)||1;
-                const price = parseInt(document.getElementById('spprice-'+p.id).value)||0;
-                const cost = p.cost||0;
-                if (!price) { alert(`"${p.name}${p.member?' '+p.member:''}"의 판매가를 입력해주세요`); hasError=true; return; }
-                selectedItems.push({prod_id:p.id, prod_name:p.name, member:p.member||'', qty, cost, price});
-            }
-        });
-        if (hasError) return;
         if (!channelId) { alert('판매 채널을 선택해주세요'); return; }
-        if (!selectedItems.length) { alert('구매 물품을 선택해주세요'); return; }
+        if (!saleCart.length) { alert('구매 물품을 담아주세요'); return; }
         if (!custName||!custPhone||!custAddr) { alert('받는이 정보를 입력해주세요'); return; }
+        const selectedItems = saleCart.map(c => ({...c}));
 
         const totalRevenue = selectedItems.reduce((s,i)=>s+i.price*i.qty,0);
         const totalCost = selectedItems.reduce((s,i)=>s+i.cost*i.qty,0);
@@ -773,7 +918,7 @@
 
         ['shipping','custName','custPhone','custAddr','custZip','custMemo','prodVal'].forEach(id=>document.getElementById(id).value='');
         document.getElementById('size').value='';
-        products.forEach(p=>{ const c=document.getElementById('spcard-'+p.id); if(c) c.classList.remove('selected'); });
+        saleCart = []; renderSaleCart();
         showMsg('saleSuccess'); loadSales();
     }
 
